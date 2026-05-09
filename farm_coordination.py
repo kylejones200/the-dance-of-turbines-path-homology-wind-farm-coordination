@@ -17,13 +17,31 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
 from pathlib import Path
 import warnings
+import logging
+import yaml
+
+def load_config(config_path=None):
+    """Load configuration from YAML file."""
+    if config_path is None:
+        config_path = Path(__file__).parent / 'config.yaml'
+    if not config_path.exists():
+        return {}
+    with open(config_path) as _f:
+        import yaml as _yaml
+        return _yaml.safe_load(_f) or {}
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 warnings.filterwarnings('ignore')
 
-np.random.seed(42)
+np.random.seed(config.get('data', {}).get('seed', 42))
 
 def fetch_nrel_wind_data(lat=41.5, lon=-100.5, years=[2010, 2011, 2012]):
     """Simulate NREL Wind Toolkit data fetch."""
-    print(f"Simulating NREL wind data fetch for location ({lat}, {lon})")
+    logger.info(f"Simulating NREL wind data fetch for location ({lat}, {lon})")
     
     n_records = 365 * 24 * 12 * len(years)  # 5-min intervals
     timestamps = pd.date_range(start=f'{years[0]}-01-01', periods=n_records, freq='5min')
@@ -42,7 +60,7 @@ def fetch_nrel_wind_data(lat=41.5, lon=-100.5, years=[2010, 2011, 2012]):
         'windspeed': windspeed
     })
     
-    print(f"Fetched {len(df)} records spanning {len(years)} years")
+    logger.info(f"Fetched {len(df)} records spanning {len(years)} years")
     return df
 
 def simulate_turbine_power_curve(windspeed, rated_power=2.0):
@@ -147,7 +165,7 @@ def create_coordination_scenarios(df, n_windows=120, window_size=288):
     Create labeled windows of coordination patterns.
     0 = wake propagation, 1 = grid event, 2 = oscillatory
     """
-    print(f"\nCreating {n_windows} labeled windows (wake/grid/oscillatory)...")
+    logger.info(f"\nCreating {n_windows} labeled windows (wake/grid/oscillatory)...")
     
     windows = []
     labels = []
@@ -180,7 +198,7 @@ def create_coordination_scenarios(df, n_windows=120, window_size=288):
     
     labels = np.array(labels)
     label_counts = np.bincount(labels, minlength=3)
-    print(f"Created {label_counts[0]} wake, {label_counts[1]} grid, {label_counts[2]} oscillatory windows")
+    logger.info(f"Created {label_counts[0]} wake, {label_counts[1]} grid, {label_counts[2]} oscillatory windows")
     
     return windows, labels
 
@@ -287,12 +305,12 @@ def compute_path_homology_features(G, n_turbines=6):
 
 def extract_all_features(windows, labels):
     """Extract path homology and directed graph features."""
-    print("\nExtracting path homology features from directed networks...")
+    logger.info("\nExtracting path homology features from directed networks...")
     
     feature_list = []
     for i, window_df in enumerate(windows):
         if i % 20 == 0:
-            print(f"  Processing window {i+1}/{len(windows)}")
+            logger.info(f"  Processing window {i+1}/{len(windows)}")
         
         G, edge_weights = compute_lead_lag_network(window_df, n_turbines=6, max_lag=10)
         features = compute_path_homology_features(G, n_turbines=6)
@@ -311,24 +329,24 @@ def extract_all_features(windows, labels):
     X = X.replace([np.inf, -np.inf], np.nan)
     X = X.fillna(0)
     
-    print(f"\nFeature matrix: {X.shape}")
+    logger.info(f"\nFeature matrix: {X.shape}")
     label_counts = np.bincount(y, minlength=3)
-    print(f"Label distribution: Wake={label_counts[0]}, Grid={label_counts[1]}, Oscillatory={label_counts[2]}")
+    logger.info(f"Label distribution: Wake={label_counts[0]}, Grid={label_counts[1]}, Oscillatory={label_counts[2]}")
     
     return X, y
 
 def train_and_evaluate_models(X, y):
     """Train and evaluate classifiers."""
-    print("\n" + "="*60)
-    print("TRAINING AND EVALUATION")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("TRAINING AND EVALUATION")
+    logger.info("="*60)
     
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
     )
     
-    print(f"\nTrain set: {len(X_train)} samples")
-    print(f"Test set: {len(X_test)} samples")
+    logger.info(f"\nTrain set: {len(X_train)} samples")
+    logger.info(f"Test set: {len(X_test)} samples")
     
     models = {
         'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000, multi_class='multinomial'),
@@ -340,7 +358,7 @@ def train_and_evaluate_models(X, y):
     results = {}
     
     for name, model in models.items():
-        print(f"\n{name}:")
+        logger.info(f"\n{name}:")
         model.fit(X_train, y_train)
         
         y_pred = model.predict(X_test)
@@ -349,9 +367,9 @@ def train_and_evaluate_models(X, y):
         f1_macro = f1_score(y_test, y_pred, average='macro')
         f1_weighted = f1_score(y_test, y_pred, average='weighted')
         
-        print(f"  Accuracy: {acc:.3f}")
-        print(f"  F1 (macro): {f1_macro:.3f}")
-        print(f"  F1 (weighted): {f1_weighted:.3f}")
+        logger.info(f"  Accuracy: {acc:.3f}")
+        logger.info(f"  F1 (macro): {f1_macro:.3f}")
+        logger.info(f"  F1 (weighted): {f1_weighted:.3f}")
         
         results[name] = {
             'model': model,
@@ -365,16 +383,16 @@ def train_and_evaluate_models(X, y):
 
 def generate_visualizations(windows, labels, X, y, results, out_dir):
     """Generate comprehensive visualizations."""
-    print("\n" + "="*60)
-    print("GENERATING VISUALIZATIONS")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("GENERATING VISUALIZATIONS")
+    logger.info("="*60)
     
     out_dir = Path(out_dir)
     out_dir.mkdir(exist_ok=True, parents=True)
     
     # 1. Model comparison
-    print("\n1. Model comparison...")
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    logger.info("\n1. Model comparison...")
+    fig, axes = plt.subplots(1, 2, figsize=tuple(config.get('output', {}).get('figsize', [12, 4])))
     
     model_names = list(results.keys())
     accuracies = [results[m]['accuracy'] for m in model_names]
@@ -401,10 +419,10 @@ def generate_visualizations(windows, labels, X, y, results, out_dir):
     plt.tight_layout()
     plt.savefig(out_dir / "model_comparison.png", dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"  Saved: model_comparison.png")
+    logger.info(f"  Saved: model_comparison.png")
     
     # 2. Network visualizations
-    print("2. Network structure examples...")
+    logger.info("2. Network structure examples...")
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     
     pattern_names = ['Wake Propagation', 'Grid Event', 'Oscillatory']
@@ -428,10 +446,10 @@ def generate_visualizations(windows, labels, X, y, results, out_dir):
     plt.tight_layout()
     plt.savefig(out_dir / "network_structures.png", dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"  Saved: network_structures.png")
+    logger.info(f"  Saved: network_structures.png")
     
     # 3. Cycle count distribution
-    print("3. Cycle count distribution...")
+    logger.info("3. Cycle count distribution...")
     plt.figure(figsize=(10, 6))
     
     for pattern_idx, (pattern_name, color) in enumerate([('Wake', 'blue'), ('Grid', 'green'), ('Oscillatory', 'red')]):
@@ -445,10 +463,10 @@ def generate_visualizations(windows, labels, X, y, results, out_dir):
     plt.tight_layout()
     plt.savefig(out_dir / "cycle_distribution.png", dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"  Saved: cycle_distribution.png")
+    logger.info(f"  Saved: cycle_distribution.png")
     
     # 4. Feature importance
-    print("4. Feature importance...")
+    logger.info("4. Feature importance...")
     if 'Random Forest' in results:
         rf_model = results['Random Forest']['model']
         importances = rf_model.feature_importances_
@@ -465,16 +483,16 @@ def generate_visualizations(windows, labels, X, y, results, out_dir):
         plt.tight_layout()
         plt.savefig(out_dir / "feature_importance.png", dpi=300, bbox_inches='tight')
         plt.close()
-        print(f"  Saved: feature_importance.png")
+        logger.info(f"  Saved: feature_importance.png")
     
-    print("\nAll visualizations generated successfully!")
+    logger.info("\nAll visualizations generated successfully!")
 
 def main():
     """Main execution."""
-    print("="*60)
-    print("WIND FARM COORDINATION PATTERN DETECTION")
-    print("Persistent Path Homology on Directed Lead-Lag Networks")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("WIND FARM COORDINATION PATTERN DETECTION")
+    logger.info("Persistent Path Homology on Directed Lead-Lag Networks")
+    logger.info("="*60)
     
     df = fetch_nrel_wind_data()
     windows, labels = create_coordination_scenarios(df, n_windows=120, window_size=288)
@@ -484,21 +502,21 @@ def main():
     out_dir = Path(__file__).parent / "figures_coordination"
     generate_visualizations(windows, labels, X, y, results, out_dir)
     
-    print("\n" + "="*60)
-    print("FINAL SUMMARY")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("FINAL SUMMARY")
+    logger.info("="*60)
     best_model_name = max(results.keys(), key=lambda k: results[k]['accuracy'])
     best_result = results[best_model_name]
-    print(f"\nBest Model: {best_model_name}")
-    print(f"  Accuracy: {best_result['accuracy']:.3f}")
-    print(f"  F1 (macro): {best_result['f1_macro']:.3f}")
+    logger.info(f"\nBest Model: {best_model_name}")
+    logger.info(f"  Accuracy: {best_result['accuracy']:.3f}")
+    logger.info(f"  F1 (macro): {best_result['f1_macro']:.3f}")
     
-    print("\nClassification Report:")
-    print(classification_report(best_result['y_test'], best_result['y_pred'],
+    logger.info("\nClassification Report:")
+    logger.info(classification_report(best_result['y_test'], best_result['y_pred'],
                                target_names=['Wake Propagation', 'Grid Event', 'Oscillatory']))
     
-    print(f"\nVisualizations saved to: {out_dir}/")
-    print("\nAnalysis complete!")
+    logger.info(f"\nVisualizations saved to: {out_dir}/")
+    logger.info("\nAnalysis complete!")
 
 if __name__ == "__main__":
     main()
