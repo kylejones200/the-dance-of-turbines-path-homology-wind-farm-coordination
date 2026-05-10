@@ -381,7 +381,7 @@ def train_and_evaluate_models(X, y):
     
     return results
 
-def generate_visualizations(windows, labels, X, y, results, out_dir):
+def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool = False):
     """Generate comprehensive visualizations."""
     logger.info("\n" + "="*60)
     logger.info("GENERATING VISUALIZATIONS")
@@ -392,97 +392,98 @@ def generate_visualizations(windows, labels, X, y, results, out_dir):
     
     # 1. Model comparison
     logger.info("\n1. Model comparison...")
-    fig, axes = plt.subplots(1, 2, figsize=tuple(config.get('output', {}).get('figsize', [12, 4])))
+    if plot:
+        fig, axes = plt.subplots(1, 2, figsize=tuple(config.get('output', {}).get('figsize', [12, 4])))
     
-    model_names = list(results.keys())
-    accuracies = [results[m]['accuracy'] for m in model_names]
-    f1s = [results[m]['f1_macro'] for m in model_names]
+        model_names = list(results.keys())
+        accuracies = [results[m]['accuracy'] for m in model_names]
+        f1s = [results[m]['f1_macro'] for m in model_names]
     
-    axes[0].bar(range(len(model_names)), accuracies, color='#2b2b2b', alpha=0.85)
-    axes[0].set_xticks(range(len(model_names)))
-    axes[0].set_xticklabels(model_names, rotation=45, ha='right')
-    axes[0].set_ylabel('Accuracy')
-    axes[0].set_title('Coordination Pattern Classification Accuracy')
-    axes[0].set_ylim([0, 1])
-    axes[0].spines['top'].set_visible(False)
-    axes[0].spines['right'].set_visible(False)
+        axes[0].bar(range(len(model_names)), accuracies, color='#2b2b2b', alpha=0.85)
+        axes[0].set_xticks(range(len(model_names)))
+        axes[0].set_xticklabels(model_names, rotation=45, ha='right')
+        axes[0].set_ylabel('Accuracy')
+        axes[0].set_title('Coordination Pattern Classification Accuracy')
+        axes[0].set_ylim([0, 1])
+        axes[0].spines['top'].set_visible(False)
+        axes[0].spines['right'].set_visible(False)
     
-    axes[1].bar(range(len(model_names)), f1s, color='#d62728', alpha=0.85)
-    axes[1].set_xticks(range(len(model_names)))
-    axes[1].set_xticklabels(model_names, rotation=45, ha='right')
-    axes[1].set_ylabel('F1 Score (macro)')
-    axes[1].set_title('Coordination Pattern F1 Score')
-    axes[1].set_ylim([0, 1])
-    axes[1].spines['top'].set_visible(False)
-    axes[1].spines['right'].set_visible(False)
+        axes[1].bar(range(len(model_names)), f1s, color='#d62728', alpha=0.85)
+        axes[1].set_xticks(range(len(model_names)))
+        axes[1].set_xticklabels(model_names, rotation=45, ha='right')
+        axes[1].set_ylabel('F1 Score (macro)')
+        axes[1].set_title('Coordination Pattern F1 Score')
+        axes[1].set_ylim([0, 1])
+        axes[1].spines['top'].set_visible(False)
+        axes[1].spines['right'].set_visible(False)
     
-    plt.tight_layout()
-    plt.savefig(out_dir / "model_comparison.png", dpi=300, bbox_inches='tight')
-    plt.close()
-    logger.info(f"  Saved: model_comparison.png")
+        plt.tight_layout()
+        plt.savefig(out_dir / "model_comparison.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        logger.info(f"  Saved: model_comparison.png")
     
     # 2. Network visualizations
-    logger.info("2. Network structure examples...")
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        logger.info("2. Network structure examples...")
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     
-    pattern_names = ['Wake Propagation', 'Grid Event', 'Oscillatory']
+        pattern_names = ['Wake Propagation', 'Grid Event', 'Oscillatory']
     
-    for pattern_idx, (ax, pattern_name) in enumerate(zip(axes, pattern_names)):
-        window_idx = np.where(labels == pattern_idx)[0][0]
-        window = windows[window_idx]
+        for pattern_idx, (ax, pattern_name) in enumerate(zip(axes, pattern_names)):
+            window_idx = np.where(labels == pattern_idx)[0][0]
+            window = windows[window_idx]
         
-        G, _ = compute_lead_lag_network(window, n_turbines=6, max_lag=10)
+            G, _ = compute_lead_lag_network(window, n_turbines=6, max_lag=10)
         
-        pos = nx.spring_layout(G, seed=42)
-        nx.draw_networkx_nodes(G, pos, ax=ax, node_color='lightblue', 
-                              node_size=500, edgecolors='black', linewidths=2)
-        nx.draw_networkx_labels(G, pos, ax=ax, font_size=12, font_weight='bold')
-        nx.draw_networkx_edges(G, pos, ax=ax, edge_color='gray', 
-                              arrows=True, arrowsize=20, arrowstyle='->', width=2)
+            pos = nx.spring_layout(G, seed=42)
+            nx.draw_networkx_nodes(G, pos, ax=ax, node_color='lightblue', 
+                                  node_size=500, edgecolors='black', linewidths=2)
+            nx.draw_networkx_labels(G, pos, ax=ax, font_size=12, font_weight='bold')
+            nx.draw_networkx_edges(G, pos, ax=ax, edge_color='gray', 
+                                  arrows=True, arrowsize=20, arrowstyle='->', width=2)
         
-        ax.set_title(pattern_name)
-        ax.axis('off')
+            ax.set_title(pattern_name)
+            ax.axis('off')
     
-    plt.tight_layout()
-    plt.savefig(out_dir / "network_structures.png", dpi=300, bbox_inches='tight')
-    plt.close()
-    logger.info(f"  Saved: network_structures.png")
+        plt.tight_layout()
+        plt.savefig(out_dir / "network_structures.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        logger.info(f"  Saved: network_structures.png")
     
     # 3. Cycle count distribution
-    logger.info("3. Cycle count distribution...")
-    plt.figure(figsize=(10, 6))
+        logger.info("3. Cycle count distribution...")
+        plt.figure(figsize=(10, 6))
     
-    for pattern_idx, (pattern_name, color) in enumerate([('Wake', 'blue'), ('Grid', 'green'), ('Oscillatory', 'red')]):
-        values = X[y == pattern_idx]['n_cycles']
-    plt.hist(values, bins=15, alpha=0.5, label=pattern_name, color=color, edgecolor='#2b2b2b')
+        for pattern_idx, (pattern_name, color) in enumerate([('Wake', 'blue'), ('Grid', 'green'), ('Oscillatory', 'red')]):
+            values = X[y == pattern_idx]['n_cycles']
+        plt.hist(values, bins=15, alpha=0.5, label=pattern_name, color=color, edgecolor='#2b2b2b')
     
-    plt.xlabel('Number of Feedback Cycles')
-    plt.ylabel('Count')
-    plt.title('Feedback Cycle Distribution by Pattern Type')
-    plt.legend(frameon=False)
-    plt.tight_layout()
-    plt.savefig(out_dir / "cycle_distribution.png", dpi=300, bbox_inches='tight')
-    plt.close()
-    logger.info(f"  Saved: cycle_distribution.png")
+        plt.xlabel('Number of Feedback Cycles')
+        plt.ylabel('Count')
+        plt.title('Feedback Cycle Distribution by Pattern Type')
+        plt.legend(frameon=False)
+        plt.tight_layout()
+        plt.savefig(out_dir / "cycle_distribution.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        logger.info(f"  Saved: cycle_distribution.png")
     
     # 4. Feature importance
-    logger.info("4. Feature importance...")
-    if 'Random Forest' in results:
-        rf_model = results['Random Forest']['model']
-        importances = rf_model.feature_importances_
-        indices = np.argsort(importances)[::-1][:10]
+        logger.info("4. Feature importance...")
+        if 'Random Forest' in results:
+            rf_model = results['Random Forest']['model']
+            importances = rf_model.feature_importances_
+            indices = np.argsort(importances)[::-1][:10]
         
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.bar(range(len(indices)), importances[indices], color='#2b2b2b', alpha=0.85)
-        ax.set_xticks(range(len(indices)))
-        ax.set_xticklabels([X.columns[i] for i in indices], rotation=45, ha='right')
-        ax.set_ylabel('Importance')
-        ax.set_title('Top 10 Feature Importances (Random Forest)')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        plt.tight_layout()
-        plt.savefig(out_dir / "feature_importance.png", dpi=300, bbox_inches='tight')
-        plt.close()
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.bar(range(len(indices)), importances[indices], color='#2b2b2b', alpha=0.85)
+            ax.set_xticks(range(len(indices)))
+            ax.set_xticklabels([X.columns[i] for i in indices], rotation=45, ha='right')
+            ax.set_ylabel('Importance')
+            ax.set_title('Top 10 Feature Importances (Random Forest)')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            plt.tight_layout()
+            plt.savefig(out_dir / "feature_importance.png", dpi=300, bbox_inches='tight')
+            plt.close()
         logger.info(f"  Saved: feature_importance.png")
     
     logger.info("\nAll visualizations generated successfully!")
