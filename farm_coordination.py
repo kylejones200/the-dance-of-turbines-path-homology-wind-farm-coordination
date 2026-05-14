@@ -37,7 +37,9 @@ logger = logging.getLogger(__name__)
 
 np.random.seed(config.get('data', {}).get('seed', 42))
 
-def fetch_nrel_wind_data(lat=41.5, lon=-100.5, years=[2010, 2011, 2012]):
+def fetch_nrel_wind_data(lat=41.5, lon=-100.5, years=None):
+    if years is None:
+        years = [2010, 2011, 2012]
     """Simulate NREL Wind Toolkit data fetch."""
     logger.info(f"Simulating NREL wind data fetch for location ({lat}, {lon})")
     
@@ -109,7 +111,7 @@ def simulate_wake_propagation(df, n_turbines=6):
             else:
                 power = simulate_turbine_power_curve(reduced_wind)
         
-        turbine_powers.append(power)
+        pd.concat([turbine_powers, power])
     
     return np.array(turbine_powers).T  # (time, turbines)
 
@@ -129,7 +131,7 @@ def simulate_grid_event(df, n_turbines=6):
         # Small spatial variation but simultaneous response
         spatial_factor = 1.0 + np.random.uniform(-0.05, 0.05)
         power = base_power * spatial_factor
-        turbine_powers.append(power)
+        pd.concat([turbine_powers, power])
     
     return np.array(turbine_powers).T
 
@@ -191,8 +193,8 @@ def create_coordination_scenarios(df, n_windows=120, window_size=288):
         for t in range(6):
             window_df[f'turbine_{t}'] = turbine_powers[:, t]
         
-        windows.append(window_df)
-        labels.append(pattern)
+        pd.concat([windows, window_df])
+        pd.concat([labels, pattern])
     
     labels = np.array(labels)
     label_counts = np.bincount(labels, minlength=3)
@@ -232,7 +234,7 @@ def compute_lead_lag_network(window_df, n_turbines=6, max_lag=10):
             # If significant positive lag correlation, add directed edge i→j
             if max_corr > 0.3:
                 G.add_edge(i, j, weight=max_corr, lag=best_lag)
-                edge_weights.append(max_corr)
+                pd.concat([edge_weights, max_corr])
     
     return G, edge_weights
 
@@ -318,7 +320,7 @@ def extract_all_features(windows, labels):
             features[f'turbine_{t}_mean'] = window_df[f'turbine_{t}'].mean()
             features[f'turbine_{t}_std'] = window_df[f'turbine_{t}'].std()
         
-        feature_list.append(features)
+        pd.concat([feature_list, features])
     
     X = pd.DataFrame(feature_list)
     y = labels
