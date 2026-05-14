@@ -260,7 +260,7 @@ def compute_path_homology_features(G, n_turbines=6):
         else:
             features['max_cycle_length'] = 0
             features['mean_cycle_length'] = 0
-    except:
+    except Exception:
         features['n_cycles'] = 0
         features['max_cycle_length'] = 0
         features['mean_cycle_length'] = 0
@@ -277,7 +277,7 @@ def compute_path_homology_features(G, n_turbines=6):
                 features['avg_path_length'] = nx.average_shortest_path_length(subG)
             else:
                 features['avg_path_length'] = 0
-    except:
+    except Exception:
         features['avg_path_length'] = 0
     
     # In/out degree features
@@ -294,7 +294,7 @@ def compute_path_homology_features(G, n_turbines=6):
     # Reciprocity (bidirectional edges)
     try:
         features['reciprocity'] = nx.reciprocity(G) if G.number_of_edges() > 0 else 0
-    except:
+    except Exception:
         features['reciprocity'] = 0
     
     # Source/sink nodes
