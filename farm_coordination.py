@@ -337,9 +337,7 @@ def extract_all_features(windows, labels):
 
 def train_and_evaluate_models(X, y):
     """Train and evaluate classifiers."""
-    logger.info("\n" + "="*60)
-    logger.info("TRAINING AND EVALUATION")
-    logger.info("="*60)
+    logger.info("=== TRAINING AND EVALUATION ===")
     
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
@@ -383,9 +381,7 @@ def train_and_evaluate_models(X, y):
 
 def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool = False):
     """Generate comprehensive visualizations."""
-    logger.info("\n" + "="*60)
-    logger.info("GENERATING VISUALIZATIONS")
-    logger.info("="*60)
+    logger.info("=== GENERATING VISUALIZATIONS ===")
     
     out_dir = Path(out_dir)
     out_dir.mkdir(exist_ok=True, parents=True)
@@ -490,10 +486,8 @@ def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool 
 
 def main():
     """Main execution."""
-    logger.info("="*60)
     logger.info("WIND FARM COORDINATION PATTERN DETECTION")
     logger.info("Persistent Path Homology on Directed Lead-Lag Networks")
-    logger.info("="*60)
     
     df = fetch_nrel_wind_data()
     windows, labels = create_coordination_scenarios(df, n_windows=120, window_size=288)
@@ -503,9 +497,7 @@ def main():
     out_dir = Path(__file__).parent / "figures_coordination"
     generate_visualizations(windows, labels, X, y, results, out_dir)
     
-    logger.info("\n" + "="*60)
-    logger.info("FINAL SUMMARY")
-    logger.info("="*60)
+    logger.info("=== FINAL SUMMARY ===")
     best_model_name = max(results.keys(), key=lambda k: results[k]['accuracy'])
     best_result = results[best_model_name]
     logger.info(f"\nBest Model: {best_model_name}")
