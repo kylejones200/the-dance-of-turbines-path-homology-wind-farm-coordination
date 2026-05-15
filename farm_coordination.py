@@ -9,15 +9,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
-from ripser import ripser
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+from sklearn.metrics import accuracy_score, classification_report, f1_score
 from pathlib import Path
 import logging
-import yaml
 
 def load_config(config_path=None):
     """Load configuration from YAML file."""
@@ -416,7 +414,7 @@ def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool 
         plt.tight_layout()
         plt.savefig(out_dir / "model_comparison.png", dpi=300, bbox_inches='tight')
         plt.close()
-        logger.info(f"  Saved: model_comparison.png")
+        logger.info("  Saved: model_comparison.png")
     
     # 2. Network visualizations
         logger.info("2. Network structure examples...")
@@ -443,7 +441,7 @@ def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool 
         plt.tight_layout()
         plt.savefig(out_dir / "network_structures.png", dpi=300, bbox_inches='tight')
         plt.close()
-        logger.info(f"  Saved: network_structures.png")
+        logger.info("  Saved: network_structures.png")
     
     # 3. Cycle count distribution
         logger.info("3. Cycle count distribution...")
@@ -460,7 +458,7 @@ def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool 
         plt.tight_layout()
         plt.savefig(out_dir / "cycle_distribution.png", dpi=300, bbox_inches='tight')
         plt.close()
-        logger.info(f"  Saved: cycle_distribution.png")
+        logger.info("  Saved: cycle_distribution.png")
     
     # 4. Feature importance
         logger.info("4. Feature importance...")
@@ -480,7 +478,7 @@ def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool 
             plt.tight_layout()
             plt.savefig(out_dir / "feature_importance.png", dpi=300, bbox_inches='tight')
             plt.close()
-        logger.info(f"  Saved: feature_importance.png")
+        logger.info("  Saved: feature_importance.png")
     
     logger.info("\nAll visualizations generated successfully!")
 
