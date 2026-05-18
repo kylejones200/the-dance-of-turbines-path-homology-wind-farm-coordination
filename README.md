@@ -10,6 +10,14 @@ Understanding these coordination patterns matters for farm-level optimization. I
 
 Traditional analysis treats turbines as nodes in a spatial graph with edges based on physical proximity or wake interactions. Cross-correlation analysis identifies which turbines respond similarly, and lag analysis estimates propagation delays. These approaches capture pairwise relationships but miss higher-order structure—how chains of influences create paths through the farm, how multiple paths converge or diverge, and how feedback loops close when downstream effects circle back to affect upstream machines.
 
+## Setup
+
+1. Copy `.env.example` to `.env` and set `NREL_API_KEY` (free at [developer.nrel.gov/signup](https://developer.nrel.gov/signup/)). Optionally set `NREL_EMAIL` for large downloads.
+2. Adjust non-secret NREL settings in `config.yaml` (`nrel.lat`, `nrel.lon`, `nrel.years`, etc.).
+3. Install dependencies: `uv sync` (or `pip install -e .`).
+
+Runnable scripts load `config.yaml` and read secrets from `.env` via `python-dotenv` (see `nrel_wtk.py`).
+
 ## Disclaimer
 
 Educational/demo code only. Not financial, safety, or engineering advice. Use at your own risk. Verify results independently before any production or operational use.

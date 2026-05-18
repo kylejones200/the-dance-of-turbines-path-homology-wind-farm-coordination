@@ -8,6 +8,8 @@ directed topology on turbine lead-lag networks.
 import logging
 from pathlib import Path
 
+from nrel_wtk import fetch_nrel_wind_data as fetch_nrel_wtk, load_config
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -19,39 +21,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 
-def load_config(config_path=None):
-    """Load configuration from YAML file."""
-    if config_path is None:
-        config_path = Path(__file__).parent / "config.yaml"
-    if not config_path.exists():
-        return {}
-    with open(config_path) as _f:
-        import yaml as _yaml
-
-        return _yaml.safe_load(_f) or {}
-
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-np.random.seed(42)
+config = load_config()
+np.random.seed(config.get("data", {}).get("seed", 42))
 
 
-def fetch_nrel_wind_data(lat=41.5, lon=-100.5, years=None):
-    if years is None:
-        years = [2010, 2011, 2012]
-    """Simulate NREL Wind Toolkit data fetch."""
-    logger.info(f"Simulating NREL wind data fetch for location ({lat}, {lon})")
-    n_records = 365 * 24 * 12 * len(years)  # 5-min intervals
-    timestamps = pd.date_range(start=f"{years[0]}-01-01", periods=n_records, freq="5min")
-    hours = np.array([t.hour + t.minute / 60 for t in timestamps])
-    days = np.array([t.dayofyear for t in timestamps])
-    seasonal = 2 * np.sin(2 * np.pi * days / 365)
-    diurnal = 1.5 * np.sin(2 * np.pi * hours / 24)
-    windspeed = 8.5 + seasonal + diurnal + np.random.normal(0, 2, n_records)
-    windspeed = np.clip(windspeed, 0, 25)
-    df = pd.DataFrame({"timestamp": timestamps, "windspeed": windspeed})
-    logger.info(f"Fetched {len(df)} records spanning {len(years)} years")
+def fetch_nrel_wind_data() -> pd.DataFrame:
+    """Fetch wind data from NREL (config.yaml + .env)."""
+    df = fetch_nrel_wtk(config=config)
+    if df is None:
+        raise RuntimeError("NREL fetch failed; check config.yaml and .env")
+    if "windspeed_100m" in df.columns:
+        df = df.rename(columns={"windspeed_100m": "windspeed"})
     return df
 
 
