@@ -31,9 +31,7 @@ def load_config(config_path=None):
         return _yaml.safe_load(_f) or {}
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 np.random.seed(42)
@@ -44,23 +42,15 @@ def fetch_nrel_wind_data(lat=41.5, lon=-100.5, years=None):
         years = [2010, 2011, 2012]
     """Simulate NREL Wind Toolkit data fetch."""
     logger.info(f"Simulating NREL wind data fetch for location ({lat}, {lon})")
-
     n_records = 365 * 24 * 12 * len(years)  # 5-min intervals
-    timestamps = pd.date_range(
-        start=f"{years[0]}-01-01", periods=n_records, freq="5min"
-    )
-
+    timestamps = pd.date_range(start=f"{years[0]}-01-01", periods=n_records, freq="5min")
     hours = np.array([t.hour + t.minute / 60 for t in timestamps])
     days = np.array([t.dayofyear for t in timestamps])
-
     seasonal = 2 * np.sin(2 * np.pi * days / 365)
     diurnal = 1.5 * np.sin(2 * np.pi * hours / 24)
-
     windspeed = 8.5 + seasonal + diurnal + np.random.normal(0, 2, n_records)
     windspeed = np.clip(windspeed, 0, 25)
-
     df = pd.DataFrame({"timestamp": timestamps, "windspeed": windspeed})
-
     logger.info(f"Fetched {len(df)} records spanning {len(years)} years")
     return df
 
@@ -70,9 +60,7 @@ def simulate_turbine_power_curve(windspeed, rated_power=2.0):
     cut_in = 3.0
     rated_speed = 12.0
     cut_out = 25.0
-
     power = np.zeros_like(windspeed)
-
     for i, ws in enumerate(windspeed):
         if ws < cut_in or ws > cut_out:
             power[i] = 0
@@ -93,9 +81,7 @@ def simulate_wake_propagation(df, n_turbines=6):
     Turbines arranged in line, upstream affects downstream with lag.
     """
     windspeed = df["windspeed"].values
-
     turbine_powers = []
-
     for t in range(n_turbines):
         if t == 0:
             # First turbine sees full wind
@@ -104,7 +90,6 @@ def simulate_wake_propagation(df, n_turbines=6):
             # Downstream turbines see reduced wind (wake effect)
             wake_factor = 0.85**t  # Cumulative wake losses
             reduced_wind = windspeed * wake_factor
-
             # Add time lag (wake propagates at ~60% of wind speed)
             lag_steps = t * 3  # Lag increases with distance
             if lag_steps < len(reduced_wind):
@@ -125,12 +110,9 @@ def simulate_grid_event(df, n_turbines=6):
     All turbines respond simultaneously to grid frequency change.
     """
     windspeed = df["windspeed"].values
-
     # All turbines see same wind (no spatial variation)
     base_power = simulate_turbine_power_curve(windspeed)
-
     turbine_powers = []
-
     for t in range(n_turbines):
         # Small spatial variation but simultaneous response
         spatial_factor = 1.0 + np.random.uniform(-0.05, 0.05)
@@ -147,9 +129,7 @@ def simulate_oscillatory_pattern(df, n_turbines=6):
     """
     windspeed = df["windspeed"].values
     n_steps = len(windspeed)
-
     turbine_powers = np.zeros((n_steps, n_turbines))
-
     # Initialize
     for t in range(n_turbines):
         turbine_powers[:, t] = simulate_turbine_power_curve(windspeed)
@@ -157,7 +137,6 @@ def simulate_oscillatory_pattern(df, n_turbines=6):
     # Add oscillatory coupling
     oscillation_freq = 0.05  # cycles per timestep
     phase_shifts = np.linspace(0, 2 * np.pi, n_turbines, endpoint=False)
-
     for i in range(n_steps):
         oscillation = 0.15 * np.sin(2 * np.pi * oscillation_freq * i + phase_shifts)
         turbine_powers[i, :] *= 1 + oscillation
@@ -172,18 +151,13 @@ def create_coordination_scenarios(df, n_windows=120, window_size=288):
     0 = wake propagation, 1 = grid event, 2 = oscillatory
     """
     logger.info(f"\nCreating {n_windows} labeled windows (wake/grid/oscillatory)...")
-
     windows = []
     labels = []
-
     max_start = len(df) - window_size
     starts = np.random.choice(max_start, n_windows, replace=False)
-
     n_per_class = n_windows // 3
-
     for idx, start in enumerate(starts):
         window_df = df.iloc[start : start + window_size].copy()
-
         # Assign pattern type
         if idx < n_per_class:
             pattern = 0  # Wake propagation
@@ -207,7 +181,6 @@ def create_coordination_scenarios(df, n_windows=120, window_size=288):
     logger.info(
         f"Created {label_counts[0]} wake, {label_counts[1]} grid, {label_counts[2]} oscillatory windows"
     )
-
     return windows, labels
 
 
@@ -217,13 +190,10 @@ def compute_lead_lag_network(window_df, n_turbines=6, max_lag=10):
     Directed edge i→j if turbine i leads turbine j.
     """
     powers = [window_df[f"turbine_{t}"].values for t in range(n_turbines)]
-
     # Compute cross-correlations with lags
     G = nx.DiGraph()
     G.add_nodes_from(range(n_turbines))
-
     edge_weights = []
-
     for i in range(n_turbines):
         for j in range(n_turbines):
             if i == j:
@@ -232,7 +202,6 @@ def compute_lead_lag_network(window_df, n_turbines=6, max_lag=10):
             # Compute cross-correlation at different lags
             max_corr = 0
             best_lag = 0
-
             for lag in range(1, max_lag + 1):
                 if lag < len(powers[i]):
                     corr = np.corrcoef(powers[i][:-lag], powers[j][lag:])[0, 1]
@@ -254,11 +223,9 @@ def compute_path_homology_features(G, n_turbines=6):
     Focus on cycles (feedback loops) and paths.
     """
     features = {}
-
     # Basic graph features
     features["n_edges"] = G.number_of_edges()
     features["density"] = nx.density(G)
-
     # Cycle detection (feedback loops)
     try:
         cycles = list(nx.simple_cycles(G))
@@ -293,14 +260,12 @@ def compute_path_homology_features(G, n_turbines=6):
     # In/out degree features
     in_degrees = [G.in_degree(n) for n in G.nodes()]
     out_degrees = [G.out_degree(n) for n in G.nodes()]
-
     features["mean_in_degree"] = np.mean(in_degrees)
     features["mean_out_degree"] = np.mean(out_degrees)
     features["std_in_degree"] = np.std(in_degrees)
     features["std_out_degree"] = np.std(out_degrees)
     features["max_in_degree"] = max(in_degrees) if len(in_degrees) > 0 else 0
     features["max_out_degree"] = max(out_degrees) if len(out_degrees) > 0 else 0
-
     # Reciprocity (bidirectional edges)
     try:
         features["reciprocity"] = nx.reciprocity(G) if G.number_of_edges() > 0 else 0
@@ -308,20 +273,14 @@ def compute_path_homology_features(G, n_turbines=6):
         features["reciprocity"] = 0
 
     # Source/sink nodes
-    features["n_sources"] = sum(
-        1 for n in G.nodes() if G.in_degree(n) == 0 and G.out_degree(n) > 0
-    )
-    features["n_sinks"] = sum(
-        1 for n in G.nodes() if G.out_degree(n) == 0 and G.in_degree(n) > 0
-    )
-
+    features["n_sources"] = sum(1 for n in G.nodes() if G.in_degree(n) == 0 and G.out_degree(n) > 0)
+    features["n_sinks"] = sum(1 for n in G.nodes() if G.out_degree(n) == 0 and G.in_degree(n) > 0)
     return features
 
 
 def extract_all_features(windows, labels):
     """Extract path homology and directed graph features."""
     logger.info("\nExtracting path homology features from directed networks...")
-
     feature_list = []
     for i, window_df in enumerate(windows):
         if i % 20 == 0:
@@ -329,7 +288,6 @@ def extract_all_features(windows, labels):
 
         G, edge_weights = compute_lead_lag_network(window_df, n_turbines=6, max_lag=10)
         features = compute_path_homology_features(G, n_turbines=6)
-
         # Add statistical features from powers
         for t in range(6):
             features[f"turbine_{t}_mean"] = window_df[f"turbine_{t}"].mean()
@@ -339,58 +297,44 @@ def extract_all_features(windows, labels):
 
     X = pd.DataFrame(feature_list)
     y = labels
-
     # Handle NaN and inf
     X = X.replace([np.inf, -np.inf], np.nan)
     X = X.fillna(0)
-
     logger.info(f"\nFeature matrix: {X.shape}")
     label_counts = np.bincount(y, minlength=3)
     logger.info(
         f"Label distribution: Wake={label_counts[0]}, Grid={label_counts[1]}, Oscillatory={label_counts[2]}"
     )
-
     return X, y
 
 
 def train_and_evaluate_models(X, y):
     """Train and evaluate classifiers."""
     logger.info("=== TRAINING AND EVALUATION ===")
-
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
     )
-
     logger.info(f"\nTrain set: {len(X_train)} samples")
     logger.info(f"Test set: {len(X_test)} samples")
-
     models = {
         "Logistic Regression": LogisticRegression(
             random_state=42, max_iter=1000, multi_class="multinomial"
         ),
         "SVM (RBF)": SVC(kernel="rbf", random_state=42, probability=True),
         "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
-        "Gradient Boosting": GradientBoostingClassifier(
-            n_estimators=100, random_state=42
-        ),
+        "Gradient Boosting": GradientBoostingClassifier(n_estimators=100, random_state=42),
     }
-
     results = {}
-
     for name, model in models.items():
         logger.info(f"\n{name}:")
         model.fit(X_train, y_train)
-
         y_pred = model.predict(X_test)
-
         acc = accuracy_score(y_test, y_pred)
         f1_macro = f1_score(y_test, y_pred, average="macro")
         f1_weighted = f1_score(y_test, y_pred, average="weighted")
-
         logger.info(f"  Accuracy: {acc:.3f}")
         logger.info(f"  F1 (macro): {f1_macro:.3f}")
         logger.info(f"  F1 (weighted): {f1_weighted:.3f}")
-
         results[name] = {
             "model": model,
             "accuracy": acc,
@@ -402,26 +346,20 @@ def train_and_evaluate_models(X, y):
     return results
 
 
-def generate_visualizations(
-    windows, labels, X, y, results, out_dir, plot: bool = False
-):
+def generate_visualizations(windows, labels, X, y, results, out_dir, plot: bool = False):
     """Generate comprehensive visualizations."""
     logger.info("=== GENERATING VISUALIZATIONS ===")
-
     out_dir = Path(out_dir)
     out_dir.mkdir(exist_ok=True, parents=True)
-
     # 1. Model comparison
     logger.info("\n1. Model comparison...")
     if plot:
         fig, axes = plt.subplots(
             1, 2, figsize=tuple(config.get("output", {}).get("figsize", [12, 4]))
         )
-
         model_names = list(results.keys())
         accuracies = [results[m]["accuracy"] for m in model_names]
         f1s = [results[m]["f1_macro"] for m in model_names]
-
         axes[0].bar(range(len(model_names)), accuracies, color="#2b2b2b", alpha=0.85)
         axes[0].set_xticks(range(len(model_names)))
         axes[0].set_xticklabels(model_names, rotation=45, ha="right")
@@ -430,7 +368,6 @@ def generate_visualizations(
         axes[0].set_ylim([0, 1])
         axes[0].spines["top"].set_visible(False)
         axes[0].spines["right"].set_visible(False)
-
         axes[1].bar(range(len(model_names)), f1s, color="#d62728", alpha=0.85)
         axes[1].set_xticks(range(len(model_names)))
         axes[1].set_xticklabels(model_names, rotation=45, ha="right")
@@ -439,24 +376,18 @@ def generate_visualizations(
         axes[1].set_ylim([0, 1])
         axes[1].spines["top"].set_visible(False)
         axes[1].spines["right"].set_visible(False)
-
         plt.tight_layout()
         plt.savefig(out_dir / "model_comparison.png", dpi=300, bbox_inches="tight")
         plt.close()
         logger.info("  Saved: model_comparison.png")
-
         # 2. Network visualizations
         logger.info("2. Network structure examples...")
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-
         pattern_names = ["Wake Propagation", "Grid Event", "Oscillatory"]
-
         for pattern_idx, (ax, pattern_name) in enumerate(zip(axes, pattern_names)):
             window_idx = np.where(labels == pattern_idx)[0][0]
             window = windows[window_idx]
-
             G, _ = compute_lead_lag_network(window, n_turbines=6, max_lag=10)
-
             pos = nx.spring_layout(G, seed=42)
             nx.draw_networkx_nodes(
                 G,
@@ -478,7 +409,6 @@ def generate_visualizations(
                 arrowstyle="->",
                 width=2,
             )
-
             ax.set_title(pattern_name)
             ax.axis("off")
 
@@ -486,11 +416,9 @@ def generate_visualizations(
         plt.savefig(out_dir / "network_structures.png", dpi=300, bbox_inches="tight")
         plt.close()
         logger.info("  Saved: network_structures.png")
-
         # 3. Cycle count distribution
         logger.info("3. Cycle count distribution...")
         plt.figure(figsize=(10, 6))
-
         for pattern_idx, (pattern_name, color) in enumerate(
             [("Wake", "blue"), ("Grid", "green"), ("Oscillatory", "red")]
         ):
@@ -503,7 +431,6 @@ def generate_visualizations(
             color=color,
             edgecolor="#2b2b2b",
         )
-
         plt.xlabel("Number of Feedback Cycles")
         plt.ylabel("Count")
         plt.title("Feedback Cycle Distribution by Pattern Type")
@@ -512,18 +439,14 @@ def generate_visualizations(
         plt.savefig(out_dir / "cycle_distribution.png", dpi=300, bbox_inches="tight")
         plt.close()
         logger.info("  Saved: cycle_distribution.png")
-
         # 4. Feature importance
         logger.info("4. Feature importance...")
         if "Random Forest" in results:
             rf_model = results["Random Forest"]["model"]
             importances = rf_model.feature_importances_
             indices = np.argsort(importances)[::-1][:10]
-
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(
-                range(len(indices)), importances[indices], color="#2b2b2b", alpha=0.85
-            )
+            ax.bar(range(len(indices)), importances[indices], color="#2b2b2b", alpha=0.85)
             ax.set_xticks(range(len(indices)))
             ax.set_xticklabels([X.columns[i] for i in indices], rotation=45, ha="right")
             ax.set_ylabel("Importance")
@@ -531,9 +454,7 @@ def generate_visualizations(
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
             plt.tight_layout()
-            plt.savefig(
-                out_dir / "feature_importance.png", dpi=300, bbox_inches="tight"
-            )
+            plt.savefig(out_dir / "feature_importance.png", dpi=300, bbox_inches="tight")
             plt.close()
         logger.info("  Saved: feature_importance.png")
 
@@ -544,22 +465,18 @@ def main():
     """Main execution."""
     logger.info("WIND FARM COORDINATION PATTERN DETECTION")
     logger.info("Persistent Path Homology on Directed Lead-Lag Networks")
-
     df = fetch_nrel_wind_data()
     windows, labels = create_coordination_scenarios(df, n_windows=120, window_size=288)
     X, y = extract_all_features(windows, labels)
     results = train_and_evaluate_models(X, y)
-
     out_dir = Path(__file__).parent / "figures_coordination"
     generate_visualizations(windows, labels, X, y, results, out_dir)
-
     logger.info("=== FINAL SUMMARY ===")
     best_model_name = max(results.keys(), key=lambda k: results[k]["accuracy"])
     best_result = results[best_model_name]
     logger.info(f"\nBest Model: {best_model_name}")
     logger.info(f"  Accuracy: {best_result['accuracy']:.3f}")
     logger.info(f"  F1 (macro): {best_result['f1_macro']:.3f}")
-
     logger.info("\nClassification Report:")
     logger.info(
         classification_report(
@@ -568,7 +485,6 @@ def main():
             target_names=["Wake Propagation", "Grid Event", "Oscillatory"],
         )
     )
-
     logger.info(f"\nVisualizations saved to: {out_dir}/")
     logger.info("\nAnalysis complete!")
 

@@ -7,9 +7,7 @@ import numpy as np
 from matplotlib.gridspec import GridSpec
 
 np.random.seed(42)
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 FPS, N_FRAMES = 10, 100
 
@@ -35,11 +33,9 @@ def update(frame):
     ax1.clear()
     ax2.clear()
     ax3.clear()
-
     # Simulate wake propagation
     wind_dir_angle = (frame / N_FRAMES) * 2 * np.pi
     wind_x, wind_y = np.cos(wind_dir_angle), np.sin(wind_dir_angle)
-
     # Calculate power for each turbine
     power = np.ones(n_turbines) * 2000
     for i in range(n_turbines):
@@ -88,7 +84,6 @@ def update(frame):
     plt.colorbar(scatter, ax=ax1, label="Power (kW)")
     ax1.spines["top"].set_visible(False)
     ax1.spines["right"].set_visible(False)
-
     # Power distribution
     ax2.hist(power, bins=15, color="gray", alpha=0.7, edgecolor="black")
     ax2.axvline(
@@ -104,7 +99,6 @@ def update(frame):
     ax2.legend(fontsize=9)
     ax2.spines["top"].set_visible(False)
     ax2.spines["right"].set_visible(False)
-
     # Farm statistics
     total_power = power.sum()
     efficiency = (total_power / (n_turbines * 2000)) * 100
@@ -141,7 +135,6 @@ def update(frame):
     ax3.axis("off")
     ax3.set_title("Farm Status", fontsize=11, fontweight="normal")
     return []
-
 
 
 def main():
