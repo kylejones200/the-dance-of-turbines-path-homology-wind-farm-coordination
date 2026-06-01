@@ -1,0 +1,9 @@
+[package]
+name = "the_dance_of_turbines_path_homology_wind_farm_coordination_core"
+description = "Pairwise Euclidean distances between turbine positions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"

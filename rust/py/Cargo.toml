@@ -1,0 +1,15 @@
+[package]
+name = "the_dance_of_turbines_path_homology_wind_farm_coordination_rs"
+description = "Python bindings (PyO3) for the_dance_of_turbines_path_homology_wind_farm_coordination_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "the_dance_of_turbines_path_homology_wind_farm_coordination_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+the_dance_of_turbines_path_homology_wind_farm_coordination_core = { path = "../core" }
+pyo3 = { version = "0.28", features = ["extension-module"] }
+numpy = "0.28"

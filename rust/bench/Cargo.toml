@@ -1,0 +1,13 @@
+[package]
+name = "the_dance_of_turbines_path_homology_wind_farm_coordination_bench"
+description = "Standalone Rust benchmark (no Python)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "bench"
+path = "src/main.rs"
+
+[dependencies]
+the_dance_of_turbines_path_homology_wind_farm_coordination_core = { path = "../core" }
