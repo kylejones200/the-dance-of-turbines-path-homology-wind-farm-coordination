@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+from pathlib import Path
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -138,12 +139,14 @@ def update(frame):
 
 
 def main():
-    logger.info("Creating animation for Article 40...")
+    out_path = Path(__file__).parent / "images" / "coordination_animation.gif"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    logger.info("Creating wind farm coordination animation...")
     anim = animation.FuncAnimation(
         fig, update, frames=N_FRAMES, interval=1000 / FPS, blit=True, repeat=True
     )
-    anim.save("40_farm_coordination_animation.gif", writer="pillow", fps=FPS, dpi=100)
-    logger.info("✓ Animation saved: 40_farm_coordination_animation.gif")
+    anim.save(out_path, writer="pillow", fps=FPS, dpi=100)
+    logger.info("Animation saved: %s", out_path)
     plt.close()
 
 

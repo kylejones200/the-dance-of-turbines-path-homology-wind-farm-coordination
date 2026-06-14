@@ -631,7 +631,7 @@ def main():
     
     # 8. Visualizations
     print("\n8. Generating visualizations...")
-    visualize_results(y_test, y_pred, feature_importance, feature_names, 'figures_coordination')
+    visualize_results(y_test, y_pred, feature_importance, feature_names, 'images')
     
     print("\n" + "="*70)
     print("WIND FARM COORDINATION DETECTION COMPLETE")

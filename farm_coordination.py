@@ -452,7 +452,8 @@ def main():
     windows, labels = create_coordination_scenarios(df, n_windows=120, window_size=288)
     X, y = extract_all_features(windows, labels)
     results = train_and_evaluate_models(X, y)
-    out_dir = Path(__file__).parent / "figures_coordination"
+    out_dir = Path(__file__).parent / config.get("output", {}).get("figures_dir", "images")
+    out_dir.mkdir(parents=True, exist_ok=True)
     generate_visualizations(windows, labels, X, y, results, out_dir)
     logger.info("=== FINAL SUMMARY ===")
     best_model_name = max(results.keys(), key=lambda k: results[k]["accuracy"])
